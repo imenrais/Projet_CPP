@@ -4,7 +4,7 @@
 #include <QDebug>
 #include "connection.h"
 #include "client.h"
-
+#include "statistique.h"
 
 int main(int argc, char *argv[])
 {
@@ -15,10 +15,9 @@ int main(int argc, char *argv[])
     bool test=c.createconnection();
     if(test)
     {w.show();
-        QMessageBox::information(nullptr, QObject::tr("database is open"),
+        QMessageBox::critical(nullptr, QObject::tr("database is open"),
                     QObject::tr("connection successful.\n"
                                 "Click Cancel to exit."), QMessageBox::Cancel);
-
 
 }
     else
