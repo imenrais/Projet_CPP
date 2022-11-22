@@ -4,7 +4,10 @@
 #
 #-------------------------------------------------
 
-QT       += core gui sql
+QT       += core gui sql  printsupport charts multimedia multimediawidgets
+    quick
+
+
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,20 +28,32 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
-    etudiant.cpp \
+    employe.cpp \
+    login.cpp \
         main.cpp \
         mainwindow.cpp \
     connection.cpp
 
 HEADERS += \
-    etudiant.h \
+    employe.h \
+    login.h \
         mainwindow.h \
     connection.h
 
 FORMS += \
+        login.ui \
         mainwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+
+QMAKE_CXXFLAGS += -std=gnu++14
+
+RESOURCES += \
+    resources.qrc
+
+DISTFILES += \
+    user.png

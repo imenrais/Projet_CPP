@@ -2,19 +2,23 @@
 #include <QApplication>
 #include <QMessageBox>
 #include "connection.h"
-#include "etudiant.h"
+#include "employe.h"
+#include "login.h"
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    a.setStyle("fusion");
     MainWindow w;
+    //w.hide();
     Connection c;
     Etudiant E;
     bool test=c.createconnect();
-
+    login L;
+     L.show();
 
 
     if(test)
-    {w.show();
+    {
 
         QMessageBox::information(nullptr, QObject::tr("database is open"),
                     QObject::tr("connection successful.\n"
