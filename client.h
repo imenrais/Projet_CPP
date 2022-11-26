@@ -10,30 +10,35 @@ class Client
 
 private:
     int cin,tel;
+
     float prixt;
-    QString nom,prenom,email,date_de_naissance,sexe;
+    QString nom,prenom,email,sexe,datedenaissance;
 public:
 Client();
 
-Client(int,int,QString,QString,QString);
+Client(int,int,QString,QString,QString,QString,QString);
 
 int getcin();
 int gettel();
 QString getnom();
 QString getprenom();
 QString getemail();
-float getprix();
-QString getdate();
 QString getsexe();
+QString getdate();
+
+//float getprix();
+
 
 void setcin(int);
 void settel(int);
 void setnom(QString);
 void setprenom(QString);
 void setemail(QString);
-void setdate(QString);
 void setsexe(QString);
-void setprix(float);
+void setdate(QString);
+
+//void setprix(float);
+
 
 
 bool ajouter();
@@ -41,9 +46,11 @@ QSqlQueryModel * afficher ();
 bool supprimer(int);
 bool modifier(int);
 bool rechercher(int);
-QSqlQueryModel * tri_asc();
-QSqlQueryModel * tri_desc();
-QSqlQueryModel * calculer ();
+QSqlQueryModel * tri_nom();
+QSqlQueryModel * tri_prenom();
+QSqlQueryModel * tri_date();
+//QSqlQueryModel * calculer ();
+bool envoyer(int, int);
 };
 
 #endif // CLIENT_H

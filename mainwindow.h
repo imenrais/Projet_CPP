@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 #include "client.h"
+#include "arduino.h"
+#include <QString>
 #include <QMainWindow>
 #include <QSortFilterProxyModel>
 #include <QTextTableFormat>
@@ -49,9 +51,9 @@ public:
 
 
 
-   /*QtCharts::QChartView *chartView ;
+   QtCharts::QChartView *chartView ;
        void choix_bar();
-       void choix_pie();*/
+       void choix_pie();
 
 
 private slots:
@@ -65,9 +67,7 @@ private slots:
 
     void on_pb_afficher_clicked();
 
-    /*void on_pb_envoyer_clicked();*/
-
-    void on_pb_calculer_clicked();
+    void on_pb_envoyer_clicked();
 
     void on_pb_pdf_clicked();
 
@@ -75,7 +75,7 @@ private slots:
 
     void on_tri_cr_clicked();
 
-    //void on_le_stat_clicked();
+    void on_le_stat_clicked();
 
     void numberGroup_clicked(QAbstractButton*);
     void actionGroup_clicked(QAbstractButton*);
@@ -87,9 +87,17 @@ private slots:
     void on_actionPercent_clicked();
     void on_actionSign_clicked();
 
+    void on_tri_date_clicked();
+
+    void on_tri_prenom_clicked();
+
+    void on_tri_nom_clicked();
+
 private:
     Ui::MainWindow *ui;
      Client Ctmp;
+     QByteArray d,msg;
+     arduino A;
 
 
     //Digit limit

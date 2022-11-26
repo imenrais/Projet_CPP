@@ -2,8 +2,10 @@
 #include "ui_mainwindow.h"
 #include "statistique.h"
 #include "client.h"
+#include "arduino.h"
 #include <QDebug>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QMessageBox>
 #include <QIntValidator>
 #include<QSqlQueryModel>
@@ -17,6 +19,23 @@
 #include <QFileDialog>
 #include <QSqlRecord>
 #include <QMainWindow>
+#include <QtCharts>
+#include <QChartView>
+#include <QSqlQuery>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QLegend>
+#include <QtCharts>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QPieSlice>
+#include <QPieSeries>
+#include <QtCharts/QChartView>
+#include <QApplication>
+#include <QSerialPortInfo>
+#include <QSerialPort>
+
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -38,6 +57,17 @@ MainWindow::MainWindow(QWidget *parent) :
    //Set operator button group listener
    ui->actionGroup->connect(ui->actionGroup,SIGNAL(buttonClicked(QAbstractButton*)),
                             this, SLOT(actionGroup_clicked(QAbstractButton*)));
+   int ret=A.connect_arduino();
+   switch(ret)
+   {
+       case(0):qDebug()<<"arduino is available and connected to:"<<A.getarduino_port_name();
+       break;
+       case(1):qDebug()<<"arduino is available but not connected to:"<<A.getarduino_port_name();
+       break;
+       case(-1):qDebug()<<"arduino is not available";
+       break;
+   }
+QObject::connect(A.getserial(),SIGNAL(readyRead()),this,SLOT(update_label()));
 
 
 }
@@ -52,23 +82,71 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pb_ajouter_clicked()
 {
-    bool test;
+    bool test=false;
+    bool halt = false;
     int cin=ui->le_cin->text().toInt();
     int tel=ui->le_tel->text().toInt();
     QString nom=ui->le_nom->text();
     QString prenom=ui->le_prenom->text();
     QString email=ui->le_email->text();
-    Client C(cin,tel,nom,prenom,email);
-    if((cin!=0)&&(nom!="")&&(prenom!="")&&(tel!=0))
+    QString sexe;
+    QString datedenaissance=ui->datedenaissance->text();
+
+   if(ui->radioButton1->isChecked())
+    {
+
+         sexe="femme";
+    }
+
+    else if (ui->radioButton2->isChecked())
+    {
+
+        sexe="homme";
+    }
+Client C(cin,tel,nom,prenom,email,sexe,datedenaissance);
+
+        if(ui->le_cin->text() == "")
+        {
+            ui->le_cin->setPlaceholderText("cin est vide!");
+            halt = true;
+        }
+
+        if(ui->le_tel->text() == "")
+        {
+            ui->le_tel->setPlaceholderText("le numéro de téléphone est vide!");
+            halt = true;
+        }
+
+        if(ui->le_nom->text() == "")
+        {
+            ui->le_nom->setPlaceholderText("le nom est vide!");
+            halt = true;
+        }
+
+        if(ui->le_prenom->text() == "")
+        {
+            ui->le_prenom->setPlaceholderText("le prenom est vide!");
+            halt = true;
+        }
+
+        if(ui->le_email->text() == "")
+        {
+            ui->le_email->setPlaceholderText("l'email est vide!");
+            halt = true;
+        }
+
+    if((cin!=0)&&(nom!="")&&(prenom!="")&&(tel!=0)&&(datedenaissance!="")&&(sexe!=""))
     { test=C.ajouter();}
         //Refresh
         ui->tableView->setModel(Ctmp.afficher());
         if(test)
         {
 
-        QMessageBox::information(nullptr, QObject::tr("OK"),
+
+        QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
                     QObject::tr("Client(e) ajouté(e)\n"
                                 "Click Cancel to exit."), QMessageBox::Cancel);
+
        }
     else
         QMessageBox::critical(nullptr, QObject::tr("Not OK"),
@@ -106,17 +184,20 @@ void MainWindow::on_pb_rechercher_clicked()
 {
     int cin=ui->le_cin2->text().toInt();
     bool test=Ctmp.rechercher(cin);
+    ui->tableView->setModel(Ctmp.afficher());
         if(test)
-           { ui->tableView->setModel(Ctmp.afficher());
-            QMessageBox::information(nullptr,QObject::tr("recherche"),
+           {
+            QMessageBox::information(nullptr,QObject::tr("searching"),
                                     QObject::tr("search successful.\n"
                                                 "click Cancel to exit."),QMessageBox::Cancel );
 }
         else
-            QMessageBox::critical(nullptr,QObject::tr("database is not open"),
+            QMessageBox::critical(nullptr,QObject::tr("seraching"),
                                     QObject::tr("search failed.\n"
                                                 "click Cancel to exit."),QMessageBox::Cancel );
 }
+
+
 
 
 
@@ -126,11 +207,13 @@ void MainWindow::on_pb_modifier_clicked()
     QString nom =ui->le_nom->text();
     QString prenom =ui->le_prenom->text();
     int tel=ui->le_tel->text().toInt();
-   //QString date_de_naissance =ui->dateEdit->text();
     QString email =ui->le_email->text();
-   //QString sexe =ui->le sexe->text();
 
-         Client C(cin,tel,nom,prenom,email);
+    QString sexe;
+     QString datedenaissance =ui->datedenaissance->text();
+
+
+         Client C(cin,tel,nom,prenom,email,sexe,datedenaissance);
          bool test= C.modifier(cin);
     //refresh du tableau (affichage)
           ui->tableView->setModel(Ctmp.afficher());
@@ -155,10 +238,25 @@ void MainWindow::on_pb_modifier_clicked()
 /*void MainWindow::on_pb_envoyer_clicked()
 {
 
+    QByteArray msg ="";
+
+
+    //QString tel="";
+    //int cin=ui->le_cin4->text().toInt();
+    //QString tel=ui->le_tel->text();
+    msg += ui->le_msg->toPlainText();
+
+
+
+    A.write_to_arduino(msg);
+    //A.write_to_arduino(tel);
+    qDebug()<< msg ;
+
+    //QByteArray msg =QByteArrayLiteral("\x12\x00\xa4\x42\x51\x00\x00\x99") ;
+    ui->le_msg->clear();
+
+
 }*/
-
-
-
 
 
 
@@ -198,77 +296,63 @@ void MainWindow::on_pb_pdf_clicked()
 
 }
 
-void MainWindow::on_tri_dec_clicked()
+void MainWindow::on_tri_nom_clicked()
 {
  Client C;
-    ui->tableView->setModel(C.tri_desc());
+    ui->tableView->setModel(C.tri_nom());
 }
 
-void MainWindow::on_tri_cr_clicked()
+
+void MainWindow::on_tri_prenom_clicked()
 {
     Client C;
-       ui->tableView->setModel(C.tri_asc());
+       ui->tableView->setModel(C.tri_prenom());
 }
 
-/*void MainWindow::choix_pie()
+void MainWindow::on_tri_date_clicked()
 {
-
-    QSqlQueryModel * model= new QSqlQueryModel();
-
-           model->setQuery("select * from CLIENT where SALAIRE < 1000 ");
-           float salaire=model->rowCount();
-           model->setQuery("select * from CLIENT where SALAIRE  between 1000 and 2000 ");
-           float salaire1=model->rowCount();
-           float total=salaire+salaire1+salaire2;
-           QString a = QString("moins de 1000 DT  "+QString::number((salaire*100)/total,'f',2)+"%" );
-           QString b = QString("entre 1000 et 2000 DT "+QString::number((salaire1*100)/total,'f',2)+"%" );
-           QString c = QString("+2000 DT "+QString::number((salaire2*100)/total,'f',2)+"%" );
-           QPieSeries *series = new QPieSeries();
-           series->append(a,salaire);
-           series->append(b,salaire1);
-           series->append(c,salaire2);
-           if (salaire!= 0)
-           {
-               QPieSlice *slice = series->slices().at(0);
-               slice->setLabelVisible();
-               slice->setPen(QPen());
-           }
-           if ( salaire1!=0)
-           {
-                    // Add label, explode and define brush for 2nd slice
-                    QPieSlice *slice1 = series->slices().at(1);
-                    //slice1->setExploded();
-                    slice1->setLabelVisible();
-           }
-           if(salaire2!=0)
-           {
-                    // Add labels to rest of slices
-                    QPieSlice *slice2 = series->slices().at(2);
-                    //slice1->setExploded();
-                    slice2->setLabelVisible();
-           }
-                   // Create the chart widget
-                   QChart *chart = new QChart();
-                   // Add data to chart with title and hide legend
-                   chart->addSeries(series);
-                   chart->setTitle("Pourcentage Par SALAIRE :Nombre Des EMPLOYEES "+ QString::number(total));
-                   chart->legend()->hide();
-                   // Used to display the chart
-                   QChartView *chartView = new QChartView(chart);
-                   chartView->setRenderHint(QPainter::Antialiasing);
-                   chart->setAnimationOptions(QChart::SeriesAnimations);
-                   chartView->resize(1000,500);
-                   chartView->show();
-   }
+    Client C;
+       ui->tableView->setModel(C.tri_date());
+}
 
 void MainWindow::on_le_stat_clicked()
 {
-    MainWindow s;
-    s.choix_pie();
-    s.show();
+    QSqlQueryModel * model= new QSqlQueryModel();
+                            model->setQuery("select * from CLIENT where sexe like '%femme' ");
+                            float s=model->rowCount();
+                            model->setQuery("select * from CLIENT where sexe like '%homme'  ");
+                            float s1=model->rowCount();
+                            float total=s+s1;
+                            QString a = QString("femmes "+QString::number((s*100)/total,'f',2)+"%" );
+                            QString b=QString("hommes "+QString::number((s1*100)/total,'f',2)+"%" );
+                            QPieSeries *series = new QPieSeries();
+                            series->append(a,s);
+                            series->append(b,s1);
+                            //series->append(c,eee);
+                    if (s!=0)
+                    {QPieSlice *slice = series->slices().at(0);
+                     slice->setLabelVisible();
+                     slice->setPen(QPen());}
+                    if ( s1!=0)
+                    {
+                             // Add label, explode and define brush for 2nd slice
+                             QPieSlice *slice1 = series->slices().at(1);
+                             //slice1->setExploded();
+                             slice1->setLabelVisible();
+                    }
 
-
-}*/
+                            // Create the chart widget
+                            QChart *chart = new QChart();
+                            // Add data to chart with title and hide legend
+                            chart->addSeries(series);
+                            chart->setTitle("nombre total des femmes et des hommes : "+ QString::number(total));
+                            chart->legend()->hide();
+                            // Used to display the chart
+                            QChartView *chartView = new QChartView(chart);
+                            chartView->setRenderHint(QPainter::Antialiasing);
+                            chartView->resize(1000,500);
+                            chartView->show();
+}
 
 
 
@@ -533,3 +617,8 @@ void MainWindow::on_le_stat_clicked()
 
 
 }
+
+
+
+
+
