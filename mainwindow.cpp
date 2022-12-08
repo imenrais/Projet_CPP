@@ -1,452 +1,339 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "employe.h"
-
-#include<QIntValidator>
-#include<QSqlQueryModel>
-#include <QTextStream>
+#include <QMessageBox>
+#include "sponsor.h"
+#include <QDebug>
+#include "connection.h"
 #include <QFileDialog>
-#include <QPrinter>
+#include<QSystemTrayIcon>
+#include <QRegExp>
+#include <QPainter>
+#include <QDate>
 #include <QTextDocument>
-#include <QCamera>
-#include <QCameraViewfinder>
-#include <QCameraImageCapture>
-#include <QVBoxLayout>
-#include <QMenu>
-#include <QAction>
-#include <QFileDialog>
-#include <QSqlRecord>
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+#include <QPdfWriter>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QPixmap>
+#include <QPieSlice>
+#include <QPieSeries>
+#include <QtCharts>
+#include <QApplication>
+#include <QIntValidator>
+#include <QSqlQueryModel>
+//je peux utiliser le bib qintvalidator si je peux faire un cds
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    show_tables();
-mCamera = new QCamera(this);
-mCameraViewfinder= new QCameraViewfinder(this);
-mCameraImageCapture= new QCameraImageCapture(mCamera, this);
-mLayout= new QVBoxLayout;
-mOptionsMenu= new QMenu("Options",this);
-mAllumerAction= new QAction("Allumer",this);
-mEtiendreAction= new QAction("Etiendre",this);
-mCaptureAction= new QAction("Capture",this);
-mOptionsMenu->addActions({mAllumerAction,mEtiendreAction,mCaptureAction});
-ui->options->setMenu(mOptionsMenu);
-mCamera->setViewfinder(mCameraViewfinder);
-mLayout->addWidget( mCameraViewfinder);
-mLayout->setMargin(0);
-ui->scrollArea->setLayout(mLayout);
-connect (mAllumerAction, &QAction::triggered,[&]()
-{mCamera->start(); });
+    ui->tableView->setModel(s.afficher());
+    ui->tableView_2->setModel(s.afficherh());
+    //input__control
+       ui->lineEdit_4->setValidator(new QIntValidator(0,999999,this));
+       ui->lineEdit->setValidator(new QIntValidator(0,999999,this));
+       ui->lineEdit_10->setValidator(new QIntValidator(0,999999,this));
+       ui->lineEdit_8->setValidator(new QIntValidator(0,999999,this));
+       QRegExp rx("[a-zA-Z]+");
 
-connect (mEtiendreAction, &QAction::triggered,[&]()
-{mCamera->stop(); });
-
-connect (mCaptureAction, &QAction::triggered,[&]()
-{ auto filename = QFileDialog::getSaveFileName(this, "Capture" ,"/" , "Image (*,jpg; *.jpeg)");
-    if(filename.isEmpty()){return;}
-    mCameraImageCapture->setCaptureDestination(QCameraImageCapture::CaptureToFile);
-    QImageEncoderSettings imageEncoderSettings;
-    imageEncoderSettings.setCodec("image/jpeg");
-    imageEncoderSettings.setResolution(1600,1200);
-    mCameraImageCapture->setEncodingSettings(imageEncoderSettings);
-    mCamera->setCaptureMode(QCamera::CaptureStillImage);
-    mCamera->start();
-    mCamera->searchAndLock();
-    mCameraImageCapture->capture(filename);
-    mCamera->unlock();
-
-});
-
-
-
-
-
+       QValidator *validator = new
+               QRegExpValidator (rx,this);
+       ui->lineEdit_2->setValidator(validator);
+       ui->lineEdit_3->setValidator(validator);
+       ui->lineEdit_5->setValidator(validator);
+       ui->lineEdit_6->setValidator(validator);
+       ui->lineEdit_9->setValidator(validator);
+       ui->lineEdit_7->setValidator(validator);
 
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-    show_tables();
-}
-
-
-
-
-
-
-
-
-
-bool MainWindow::fill_form(int selected ) {
-    QSqlQuery fetcher;
-        fetcher.prepare("SELECT * FROM employe WHERE identifiant = (:sel) ");
-        fetcher.bindValue(":sel", selected);
-        fetcher.exec();
-
-        int ide = fetcher.record().indexOf("identifiant");
-        int nome = fetcher.record().indexOf("nom");
-        int prenome = fetcher.record().indexOf("prenom");
-        int rolee = fetcher.record().indexOf("role");
-        int salairee= fetcher.record().indexOf("salaire");
-        int emaile= fetcher.record().indexOf("email");
-        int numeroe=fetcher.record().indexOf("numero");
-
-        while (fetcher.next())
-        {
-            ui->le_id->setText(fetcher.value(ide).toString());
-            ui->le_nom->setText(fetcher.value(nome).toString());
-            ui->le_prenom->setText(fetcher.value(prenome).toString());
-            ui->le_salaire->setText(fetcher.value(salairee).toString());
-            ui->le_email->setText(fetcher.value(emaile).toString());
-            ui->le_numero->setText(fetcher.value(numeroe).toString());
-            ui->le_role->setText(fetcher.value(rolee).toString());
-
-
-    }
- return    fetcher.exec();
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void MainWindow::on_pb_ajouter_clicked()
-{
-bool test;
-    //recuperation des donnees
-       int identifiant =ui->le_id->text().toInt();
-       QString nom =ui->le_nom->text();
-       QString prenom =ui->le_prenom->text();
-       QString role =ui->le_role->text();
-       QString date_de_naissance =ui->dateEdit->text();
-       QString email =ui->le_email->text();
-       int salaire =ui->le_salaire->text().toInt();
-       QString numero =ui->le_numero->text();
-
-Etudiant E(identifiant ,nom,prenom,role,date_de_naissance,email,salaire,numero);
-if((identifiant!=0)&&(nom!="")&&(prenom!="")&&(role!=""))
-{ test=E.ajouter();}
-
-        //refresh du tableau (affichage)
-         show_tables();
-
-
-        /* if(test)
-
-
-             QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
-                         QObject::tr("ajout successful.\n"
-                                     "ajout effectuer."), QMessageBox::Cancel);
-
-
-         else
-
-             QMessageBox::critical(nullptr, QObject::tr("ERROR"),
-                         QObject::tr("connection failed.\n"
-                                     "Click Cancel to exit."), QMessageBox::Cancel);*/
-
-
-}
-
-void MainWindow::show_tables(){
-//creation model (masque du tableau) : permet recherche et tri
-    proxy = new QSortFilterProxyModel();
-
- //definir la source (tableau original)
-    proxy->setSourceModel(E.afficher());
-
- //pour la recherche
-    proxy->setFilterCaseSensitivity(Qt::CaseInsensitive); // S=s (pas de difference entre majiscule et miniscule)
-    proxy->setFilterKeyColumn(-1); // chercher dans tout le tableau (-1) ou donner le numero de la colone
-   //remplissage tableau avec le masque
-    ui->tab->setModel(proxy);
-
-}
-void MainWindow::on_tab_clicked(const QModelIndex &index)
-{
-    selected=ui->tab->model()->data(index).toInt();
-   /* QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
-                QObject::tr("identifiant is selected\n"
-                            ""), QMessageBox::Cancel);*/
-}
-
-
-
-
-
-void MainWindow::on_tab_doubleClicked(const QModelIndex &index)
-{
-    /*MainWindow ac(this);
-
-
-
-
-
- bool tes=ac.fill_form(selected);
- if(tes)
-
-
-     QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
-                 QObject::tr("recuperation successful.\n"
-                             "recuperation effectuer."), QMessageBox::Cancel);
-
-
- else
-
-     QMessageBox::critical(nullptr, QObject::tr("ERROR"),
-                 QObject::tr("recuperation failed.\n"
-                             "Click Cancel to exit."), QMessageBox::Cancel);*/
-
-
-
-
-
-
-
-
-}
-
-
-void MainWindow::on_rech_textChanged(const QString &arg1)
-{
-    proxy->setFilterFixedString(arg1);
-}
-
-
-void MainWindow::on_pb_del_clicked()
-{
-    Etudiant mc;
-   bool test=  mc.supprimer(selected);
-
-    //refresh du tableau (affichage)
-      show_tables();
-
-      /*if((test)&&(selected!=0))
-
-
-      {QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
-                      QObject::tr("delete successful.\n"
-                                  "supprission effectuer."), QMessageBox::Cancel);}
-
-
-      else if(selected==0)
-
-        {  QMessageBox::critical(nullptr, QObject::tr("ERROR"),
-                      QObject::tr("delete failed.\n"
-                                  "Click Cancel to exit."), QMessageBox::Cancel);}*/
-}
-
-
-void MainWindow::on_pb_modifier_clicked()
-{
-
-    int identifiant =ui->le_id->text().toInt();
-    QString nom =ui->le_nom->text();
-    QString prenom =ui->le_prenom->text();
-    QString role =ui->le_role->text();
-    QString date_de_naissance =ui->dateEdit->text();
-    QString email =ui->le_email->text();
-    int salaire =ui->le_salaire->text().toInt();
-    QString numero =ui->le_numero->text();
-
-           //mofication
-         Etudiant E(identifiant ,nom,prenom,role,date_de_naissance,email,salaire,numero);
-         bool test=  E.modifier(selected);
-
-
-
-         //refresh du tableau (affichage)
-          show_tables();
-
-
-         /* if(test)
-
-
-              QMessageBox::information(nullptr, QObject::tr("SUCCESS"),
-                          QObject::tr("update successful.\n"
-                                      "modification effectuer."), QMessageBox::Cancel);
-
-
-          else
-
-              QMessageBox::critical(nullptr, QObject::tr("ERROR"),
-                          QObject::tr("update failed.\n"
-                                      "Click Cancel to exit."), QMessageBox::Cancel);*/
-
-
-
-}
-
-
-
-
-void MainWindow::on_affiche_clicked()
-{
-    show_tables();
-}
-
-
-
-
-
-void MainWindow::on_comboBox_activated(int index)
-{
-    Etudiant E;
-
-    if(index==0)
-    ui->tab->setModel(E.tri_id());
-    if(index==1)
-    ui->tab->setModel(E.tri_nom());
-    if(index==2)
-    ui->tab->setModel(E.tri_role());
 }
 
 
 void MainWindow::on_pushButton_clicked()
 {
-    QString strStream;
-        QTextStream out(&strStream);
-       const int rowCount = ui->tab->model()->rowCount();
-       const int columnCount =ui->tab->model()->columnCount();
+    QString nom=ui->lineEdit_2->text();
+    QString type=ui->lineEdit_3->text();
+    QString pays=ui->lineEdit_5->text();
+    int duree=ui->lineEdit_4->text().toInt();
+    sponsor s(nom,type,duree,pays);
+    bool test=s.ajouter();
 
 
-       out <<  "<html>\n"
-           "<head>\n"
-        "<meta Content=\"Text/html; charset=Windows-1251\">\n"
-          <<  QString("<title>%1</title>\n").arg("employe")
-          <<  "</head>\n"
-             "<body bgcolor=grey link=#5000A0>\n"
-                  "<h1>Liste des Employe</h1>"
+    if(test)
+        {
+            QMessageBox::information(nullptr, QObject::tr("ok"),
+                                     QObject::tr("ajoute \n"
+                                                 "click to cancel"), QMessageBox::Cancel);
+            ui->lineEdit_4->clear();
+            ui->lineEdit_2->clear();
+            ui->lineEdit_3->clear();
+            ui->lineEdit_5->clear();
+            ui->tableView->setModel(s.afficher());
+            //historique
+            QSqlQuery query;  //variable d'accees lel BD
+            query.prepare("INSERT INTO historique (action)"
+                                  "VALUES (:action)");
+            query.bindValue(":action","ajout");
+            query.exec();//exec fait retourner true or false
+            ui->tableView_2->setModel(s.afficherh());
+            //historique
+        }
+        else
+            QMessageBox::critical(nullptr, QObject::tr("not ok") , QObject::tr("non effecue"),QMessageBox::Cancel);
 
-             "<table border=1 cellspacing=0 cellpadding=2>\n";
 
-                        // headers
-                            out << "<thead><tr bgcolor=#f0f0f0>";
-                            for (int column = 0; column < columnCount; column++)
-                                if (!ui->tab->isColumnHidden(column))
-                                    out << QString("<th>%1</th>").arg(ui->tab->model()->headerData(column, Qt::Horizontal).toString());
-                            out << "</tr></thead>\n";
-                            // data table
-                               for (int row = 0; row < rowCount; row++) {
-                                   out << "<tr>";
-                                   for (int column = 0; column < columnCount; column++) {
-                                       if (!ui->tab->isColumnHidden(column)) {
-                                           QString data = ui->tab->model()->data(ui->tab->model()->index(row, column)).toString().simplified();
-                                           out << QString("<td bkcolor=0>%1</td>").arg((!data.isEmpty()) ? data : QString("&nbsp;"));
-                                       }
+
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    int id=ui->lineEdit->text().toInt();
+    bool test=s.supprimer(id);
+
+
+    if(test)
+        {
+            QMessageBox::information(nullptr, QObject::tr("ok"),
+                                     QObject::tr("supprimer \n"
+                                                 "click to cancel"), QMessageBox::Cancel);
+            ui->lineEdit->clear();
+            QSqlQuery query;  //variable d'accees lel BD
+            //historique
+            query.prepare("INSERT INTO historique (action)"
+                                  "VALUES (:action)");
+            query.bindValue(":action","suppression");
+            query.exec();//exec fait retourner true or false
+            ui->tableView->setModel(s.afficher());
+            ui->tableView_2->setModel(s.afficherh());
+            //historique
+
+        }
+        else
+            QMessageBox::critical(nullptr, QObject::tr("not ok") , QObject::tr("non effecue"),QMessageBox::Cancel);
+
+
+
+}
+
+void MainWindow::on_pushButton_3_clicked()
+{
+    int id=ui->lineEdit_10->text().toInt();
+    int duree=ui->lineEdit_8->text().toInt();
+    QString nom=ui->lineEdit_6->text();
+    QString type=ui->lineEdit_7->text();
+    QString pays=ui->lineEdit_9->text();
+    bool test=s.modifier(id,nom,type,duree,pays);
+
+    if(test)
+        {
+            QMessageBox::information(nullptr, QObject::tr("ok"),
+                                     QObject::tr("modifier \n"
+                                                 "click to cancel"), QMessageBox::Cancel);
+            ui->lineEdit_10->clear();
+            ui->lineEdit_8->clear();
+            ui->lineEdit_6->clear();
+            ui->lineEdit_7->clear();
+            ui->lineEdit_9->clear();
+            //historique
+            QSqlQuery query;  //variable d'accees lel BD
+            query.prepare("INSERT INTO historique (action)"
+                                  "VALUES (:action)");
+            query.bindValue(":action","modification");
+            query.exec();//exec fait retourner true or false
+            ui->tableView->setModel(s.afficher());
+            ui->tableView_2->setModel(s.afficherh());
+            //historique
+
+        }
+        else
+            QMessageBox::critical(nullptr, QObject::tr("not ok") , QObject::tr("non effecue"),QMessageBox::Cancel);
+
+
+}
+// trie id
+void MainWindow::on_pushButton_6_clicked()
+{
+    ui->tableView->setModel(s.trie_id());
+}
+// trie nom
+void MainWindow::on_pushButton_4_clicked()
+{
+    ui->tableView->setModel(s.trie_nom());
+}
+// trie duree
+void MainWindow::on_pushButton_9_clicked()
+{
+     ui->tableView->setModel(s.trie_duree());
+}
+
+// pdf
+void MainWindow::on_pushButton_7_clicked()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"),
+                                                    "/home",
+                                                    QFileDialog::ShowDirsOnly
+                                                    | QFileDialog::DontResolveSymlinks);
+        qDebug()<<dir;
+        QPdfWriter pdf(dir+"/PdfList.pdf");
+                               QPainter painter(&pdf);
+                              int i = 4000;
+
+                                   painter.drawPixmap(QRect(100,100,2500,2500),QPixmap("C:/Users/houss/Downloads/logo.jpg"));
+                                   painter.drawText(900,650,"Travel Sense");
+                                   painter.setPen(Qt::red);
+                                   painter.setFont(QFont("Time New Roman", 25));
+                                   painter.drawText(3000,1400,"Sponsor list");
+                                   painter.setPen(Qt::black);
+                                   painter.setFont(QFont("Time New Roman", 15));
+                                   painter.drawRect(100,100,9400,2500); // dimension taa rectangle li fih liste
+                                   painter.drawRect(100,3000,9400,500);
+                                   painter.setFont(QFont("Time New Roman", 9));
+                                   painter.drawText(300,3300,"ID");
+                                   painter.drawText(2000,3300,"Nom entreprise");
+                                   painter.drawText(4000,3300,"Type");
+                                   painter.drawText(5600,3300,"Duree");
+                                   painter.drawText(7000,3300,"Pays");
+                                   painter.drawRect(100,3000,9400,10700);
+                                   QTextDocument previewDoc;
+                                   //QString pdflist = QDate::currentDate().toString("'data_'MM_dd_yyyy'.txt'");
+                                   QTextCursor cursor(&previewDoc);
+                                   QSqlQuery query;
+                                   query.prepare("select * from sponsor");
+                                   query.exec();
+                                   while (query.next())
+                                   {
+                                       painter.drawText(300,i,query.value(0).toString());
+                                       painter.drawText(2000,i,query.value(1).toString());
+                                       painter.drawText(4000,i,query.value(2).toString());
+                                       painter.drawText(5600,i,query.value(3).toString());
+                                       painter.drawText(7000,i,query.value(4).toString());
+                                      i = i +500;
                                    }
-                                   out << "</tr>\n";
-                               }
-                               out <<  "</table>\n"
-                                   "</body>\n"
-                                   "</html>\n";
+                                   int reponse = QMessageBox::question(this, "Générer PDF", "<PDF Enregistré>...Vous Voulez Affichez Le PDF ?",
+                                                                       QMessageBox::Yes|QMessageBox::No);
+                                       if (reponse == QMessageBox::Yes)
+                                       {
+                                           QDesktopServices::openUrl(QUrl::fromLocalFile(dir+"/PdfList.pdf"));
+
+                                           painter.end();
+                                       }
+                                       else
+                                       {
+                                            painter.end();
+    }
+}
+// recherche
+void MainWindow::on_lineEdit_11_textChanged(const QString &arg1)
+{
+            QSqlQueryModel *model= new QSqlQueryModel();
+            QSqlQuery   *query= new QSqlQuery();
+            query->prepare("SELECT * FROM sponsor WHERE ID LIKE'"+arg1+"%' or NOM  LIKE'"+arg1+"%' or PAYS  LIKE'"+arg1+"%' or TYPE LIKE'"+arg1+"%'");
+             query->exec();
+             if (query->next()) {
+             model->setQuery(*query);
+             ui->tableView->setModel(model);
+             }
+             else {
+                 QMessageBox::critical(nullptr, QObject::tr("SEARCH"),
+                                 QObject::tr("NO MATCH FOUND !!\n"
+                                             "Click Cancel to exit."), QMessageBox::Cancel);
+              ui->lineEdit_11->clear();}
+}
+// stat
+void MainWindow::on_pushButton_5_clicked()
+{
+                                QSqlQueryModel * model= new QSqlQueryModel();
+                                model->setQuery("select * from sponsor where duree >= 5 ");
+                                float cat1=model->rowCount();
+                                model->setQuery("select * from sponsor where duree < 5 ");
+                                float cat2=model->rowCount();
+                                float total=cat1+cat2;
+                                QString a=QString("sponsor fidele "+QString::number((cat1*100)/total,'f',2)+"%" );
+                                QString b=QString("sponsor normal "+QString::number((cat2*100)/total,'f',2)+"%" );
+
+                                QPieSeries *series = new QPieSeries();
+                                series->append(a,cat1);
+                                series->append(b,cat2);
 
 
+                        if (cat1!=0)
+                        {QPieSlice *slice = series->slices().at(0);
+                         slice->setLabelVisible();
+                         slice->setPen(QPen());}
+                        if (cat2!=0)
+                        {
+                                 // Add label, explode and define brush for 2nd slice
+                                 QPieSlice *slice1 = series->slices().at(1);
+                                 //slice1->setExploded();
+                                 slice1->setLabelVisible();
+                        }
+                                // Create the chart widget
+                                QChart *chart = new QChart();
+                                // Add data to chart with title and hide legend
+                                chart->addSeries(series);
+                                chart->setTitle("Pourcentage sponsor : nombre total des sponsors : "+ QString::number(total));
+                                //chart->legend()->hide();
+                                // Used to display the chart
+                                QChartView *chartView = new QChartView(chart);
+                                chartView->setRenderHint(QPainter::Antialiasing);
+                                chartView->resize(1000,500);
+                                chartView->show();
 
-                QTextDocument *document = new QTextDocument();
-                document->setHtml(strStream);
+}
+// calendrier
+void MainWindow::on_pushButton_8_pressed()
+{
+    QCalendarWidget *calendar = new QCalendarWidget();//declaration
+       QDate date = QDate::currentDate();
+                calendar->setSelectedDate(date);
+                QTextCharFormat format = calendar->weekdayTextFormat(Qt::Wednesday);
+                     format.setForeground(QBrush(Qt::yellow, Qt::SolidPattern));
+                     calendar->selectedDate();
 
+        calendar->show();
+}
+// modification
+void MainWindow::on_tableView_activated(const QModelIndex &index)
+{
 
-                //QTextDocument document;
-                //document.setHtml(html);
-                QPrinter printer(QPrinter::PrinterResolution);
-                printer.setOutputFormat(QPrinter::PdfFormat);
-                printer.setOutputFileName("C:/Users/user/Desktop/employe.pdf");
-                document->print(&printer);
+    QString val=ui->tableView->model()->data(index).toString();
+    QSqlQuery qry;
+    qry.prepare("select * from sponsor  where ID='"+val+"' or NOM='"+val+"' or type ='"+val+"' or pays ='"+val+"' or duree='"+val+"'");
+
+    if (qry.exec())
+    { while (qry.next())
+        {
+            //update
+            //id
+            ui->lineEdit_10->setText(qry.value(0).toString());
+            // nom
+            ui->lineEdit_6->setText(qry.value(1).toString());
+            //type
+            ui->lineEdit_9->setText(qry.value(2).toString());
+            //pays
+            ui->lineEdit_7->setText(qry.value(3).toString());
+            //duree
+            ui->lineEdit_8->setText(qry.value(4).toString());
+        }
+    }
 }
 
 
-
-
-
-
-
-
-
-
-void MainWindow::choix_pie()
+void MainWindow::on_calendarWidget_selectionChanged()
 {
-
-    QSqlQueryModel * model= new QSqlQueryModel();
-
-           model->setQuery("select * from EMPLOYE where SALAIRE < 1000 ");
-           float salaire=model->rowCount();
-           model->setQuery("select * from EMPLOYE where SALAIRE  between 1000 and 2000 ");
-           float salaire1=model->rowCount();
-           model->setQuery("select * from EMPLOYE where SALAIRE>2000 ");
-           float salaire2=model->rowCount();
-           float total=salaire+salaire1+salaire2;
-           QString a = QString("moins de 1000 DT  "+QString::number((salaire*100)/total,'f',2)+"%" );
-           QString b = QString("entre 1000 et 2000 DT "+QString::number((salaire1*100)/total,'f',2)+"%" );
-           QString c = QString("+2000 DT "+QString::number((salaire2*100)/total,'f',2)+"%" );
-           QPieSeries *series = new QPieSeries();
-           series->append(a,salaire);
-           series->append(b,salaire1);
-           series->append(c,salaire2);
-           if (salaire!= 0)
-           {
-               QPieSlice *slice = series->slices().at(0);
-               slice->setLabelVisible();
-               slice->setPen(QPen());
-           }
-           if ( salaire1!=0)
-           {
-                    // Add label, explode and define brush for 2nd slice
-                    QPieSlice *slice1 = series->slices().at(1);
-                    //slice1->setExploded();
-                    slice1->setLabelVisible();
-           }
-           if(salaire2!=0)
-           {
-                    // Add labels to rest of slices
-                    QPieSlice *slice2 = series->slices().at(2);
-                    //slice1->setExploded();
-                    slice2->setLabelVisible();
-           }
-                   // Create the chart widget
-                   QChart *chart = new QChart();
-                   // Add data to chart with title and hide legend
-                   chart->addSeries(series);
-                   chart->setTitle("Pourcentage Par SALAIRE :Nombre Des EMPLOYEES "+ QString::number(total));
-                   chart->legend()->hide();
-                   // Used to display the chart
-                   QChartView *chartView = new QChartView(chart);
-                   chartView->setRenderHint(QPainter::Antialiasing);
-                   chart->setAnimationOptions(QChart::SeriesAnimations);
-                   chartView->resize(1000,500);
-                   chartView->show();
-   }
-
-
-void MainWindow::on_pb_statistic_clicked()
-{
-    MainWindow s;
-    s.choix_pie();
-    s.show();
-}
-
-
-void MainWindow::on_formulaire_clicked()
-{
-    fill_form(selected);
+    QString rech=ui->calendarWidget->selectedDate().toString();
+    ui->lineEdit_4->setText(ui->calendarWidget->selectedDate().toString());
+    QSqlQueryModel *model = new QSqlQueryModel();
+    model->setQuery("SELECT * FROM sponsor where (duree like '%"+rech+"%')");
+    model->setHeaderData(0, Qt::Horizontal,QObject::tr("ID"));//1ere colonne dans BD dindice 0
+    model->setHeaderData(1, Qt::Horizontal,QObject::tr("NOM"));
+    model->setHeaderData(2, Qt::Horizontal,QObject::tr("TYPE"));
+    model->setHeaderData(3, Qt::Horizontal,QObject::tr("PAYS"));
+    model->setHeaderData(4, Qt::Horizontal,QObject::tr("DUREE"));
+      ui->tableView->setModel(model);
+   // qInfo()<<"Date: "<<rech<<endl;
 }
 
